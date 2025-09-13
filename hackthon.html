@@ -1,0 +1,371 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>CodeTutor — Programming Education Platform (Prototype)</title>
+  <style>
+    :root{--bg:#0b1220;--card:#0f1724;--accent:#06b6d4;--accent2:#7c3aed;--muted:#94a3b8;--radius:12px;}
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Arial;background:linear-gradient(180deg,#061226 0%, #081428 100%);color:#e6eef8;padding:20px;}
+    .container{max-width:1200px;margin:0 auto;display:grid;grid-template-columns:320px 1fr;gap:18px}
+    header{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+    .logo{width:56px;height:56px;border-radius:10px;background:linear-gradient(135deg,var(--accent2),var(--accent));display:flex;align-items:center;justify-content:center;font-weight:700}
+    h1{margin:0;font-size:20px}
+    .sidebar{background:var(--card);padding:14px;border-radius:var(--radius);}
+    .card{background:rgba(255,255,255,0.02);padding:12px;border-radius:10px;margin-bottom:12px}
+    .btn{display:inline-block;padding:8px 12px;border-radius:8px;background:linear-gradient(90deg,var(--accent2),var(--accent));color:white;text-decoration:none;border:none;cursor:pointer;font-weight:600}
+    .muted{color:var(--muted)}
+    .editor-wrap{background:var(--card);padding:12px;border-radius:var(--radius);min-height:640px}
+    .toolbar{display:flex;gap:8px;align-items:center;margin-bottom:8px}
+    textarea.code{width:100%;min-height:300px;background:linear-gradient(180deg,rgba(255,255,255,0.02),transparent);border-radius:8px;padding:12px;color:#e6eef8;border:1px solid rgba(255,255,255,0.03);font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, 'Courier New', monospace;font-size:13px}
+    .panel{display:grid;grid-template-columns:1fr 320px;gap:12px}
+    .panel .side{background:rgba(255,255,255,0.02);padding:12px;border-radius:8px}
+    pre{white-space:pre-wrap;font-family:ui-monospace,Menlo,monospace;font-size:13px}
+    .issue{background:rgba(255,0,0,0.06);padding:8px;border-radius:8px;margin-bottom:8px}
+    .success{background:rgba(0,255,0,0.04);padding:8px;border-radius:8px;margin-bottom:8px}
+    .tutorial-step{padding:8px;border-radius:8px;background:rgba(255,255,255,0.02);margin-bottom:8px}
+    .exercise{padding:8px;border-radius:8px;background:rgba(255,255,255,0.01);margin-bottom:8px}
+    .input-small{padding:6px;border-radius:6px;background:transparent;border:1px solid rgba(255,255,255,0.04);color:inherit}
+    @media(max-width:980px){.container{grid-template-columns:1fr} .panel{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="logo">CT</div>
+    <div>
+      <h1>CodeTutor — Programming Education Platform (Prototype)</h1>
+      <div class="muted">In-browser code editor, error detection, debugging suggestions, exercise generation, and interactive tutorials.</div>
+    </div>
+  </header>
+
+  <div class="container">
+    <aside class="sidebar">
+      <div class="card">
+        <strong>Quick Actions</strong>
+        <div style="margin-top:8px">
+          <button class="btn" id="run-btn">Run Code</button>
+          <button class="btn" id="lint-btn" style="background:transparent;border:1px solid rgba(255,255,255,0.04);">Analyze</button>
+        </div>
+        <div style="margin-top:8px" class="muted">Run code safely in a sandboxed iframe. Use Analyze for syntax & simple static checks.</div>
+      </div>
+
+      <div class="card">
+        <strong>Tutorials</strong>
+        <div id="tutorials" style="margin-top:8px"></div>
+      </div>
+
+      <div class="card">
+        <strong>Exercises</strong>
+        <div id="exercises" style="margin-top:8px"></div>
+      </div>
+
+      <div class="card">
+        <strong>Settings</strong>
+        <label class="muted" style="display:block;margin-top:6px">Language</label>
+        <select id="lang" class="input-small" style="width:100%;margin-top:6px">
+          <option value="javascript">JavaScript</option>
+        </select>
+        <label class="muted" style="display:block;margin-top:8px">Auto-run on change</label>
+        <input type="checkbox" id="autorun" style="margin-top:6px" />
+      </div>
+    </aside>
+
+    <section class="editor-wrap">
+      <div class="toolbar">
+        <div style="flex:1">
+          <strong>Editor</strong>
+        </div>
+        <div class="muted">Use the editor to write code. Analysis uses lightweight heuristics and AST checks.</div>
+      </div>
+
+      <div class="panel">
+        <div>
+          <textarea id="code" class="code">// Try this sample:
+function greet(name){
+  return 'Hello, ' + name;
+}
+
+console.log(greet('world'));
+</textarea>
+
+          <div style="margin-top:8px;display:flex;gap:8px">
+            <button class="btn" id="format-btn">Format</button>
+            <button class="btn" id="gen-ex-btn" style="background:transparent;border:1px solid rgba(255,255,255,0.04);">Generate Exercise</button>
+            <button class="btn" id="hint-btn" style="background:transparent;border:1px solid rgba(255,255,255,0.04);">Get Debugging Hints</button>
+          </div>
+
+          <div style="margin-top:12px" id="console-wrap" class="card">
+            <strong>Console Output</strong>
+            <pre id="console">(no output yet)</pre>
+          </div>
+        </div>
+
+        <div class="side">
+          <div id="analysis" class="card">
+            <strong>Analysis & Errors</strong>
+            <div id="issues" style="margin-top:8px"></div>
+          </div>
+
+          <div id="debug-suggest" class="card">
+            <strong>Debugging Suggestions</strong>
+            <div id="suggestions" style="margin-top:8px"></div>
+          </div>
+
+          <div id="test-run" class="card">
+            <strong>Interactive Tests</strong>
+            <div id="test-status" style="margin-top:8px">No tests loaded</div>
+            <div style="margin-top:8px"><button class="btn" id="run-tests">Run Tests</button></div>
+          </div>
+        </div>
+      </div>
+
+    </section>
+  </div>
+
+  <!-- libs -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/esprima/4.0.1/esprima.min.js"></script>
+
+  <script>
+    // Basic client-side code analysis & execution prototype
+    const codeEl = document.getElementById('code');
+    const runBtn = document.getElementById('run-btn');
+    const consoleEl = document.getElementById('console');
+    const lintBtn = document.getElementById('lint-btn');
+    const issuesEl = document.getElementById('issues');
+    const suggestionsEl = document.getElementById('suggestions');
+    const genExBtn = document.getElementById('gen-ex-btn');
+    const exercisesEl = document.getElementById('exercises');
+    const tutorialsEl = document.getElementById('tutorials');
+    const hintBtn = document.getElementById('hint-btn');
+    const runTestsBtn = document.getElementById('run-tests');
+    const formatBtn = document.getElementById('format-btn');
+    const autorunEl = document.getElementById('autorun');
+
+    // ---------- Utilities ----------
+    function safeRun(code){
+      consoleEl.textContent = '';
+      // run in a sandboxed iframe to limit scope
+      const iframe = document.createElement('iframe');
+      iframe.style.display='none';
+      iframe.sandbox = 'allow-scripts';
+      document.body.appendChild(iframe);
+      const win = iframe.contentWindow;
+      const logs = [];
+      win.console = { log: (...args)=>{ logs.push(args.map(a=>String(a)).join(' ')); }, error: (...args)=>{ logs.push('ERROR: '+args.join(' ')); } };
+      try{
+        win.eval(code);
+      }catch(err){
+        logs.push('Runtime Error: '+err.message);
+      }
+      consoleEl.textContent = logs.join('\n') || '(no output)';
+      setTimeout(()=>document.body.removeChild(iframe),300);
+    }
+
+    function analyzeCode(code){
+      issuesEl.innerHTML=''; suggestionsEl.innerHTML='';
+      // Syntax check using esprima
+      try{
+        const ast = esprima.parseScript(code,{ tolerant:true, loc:true });
+        if(ast.errors && ast.errors.length){
+          ast.errors.forEach(e=>{
+            const div = document.createElement('div'); div.className='issue'; div.textContent = `Syntax: ${e.description} (line ${e.lineNumber})`; issuesEl.appendChild(div);
+          });
+        }
+        // run simple static checks
+        const undeclared = findUndeclaredIdentifiers(ast);
+        if(undeclared.length){
+          const d = document.createElement('div'); d.className='issue'; d.innerHTML = `<strong>Possible undefined identifiers:</strong> ${undeclared.join(', ')}`; issuesEl.appendChild(d);
+          suggestionsEl.innerHTML = `<div class='tutorial-step'>Declare missing variables or check for typos: ${undeclared.join(', ')}</div>`;
+        } else {
+          const s = document.createElement('div'); s.className='success'; s.textContent='No obvious undefined identifiers detected.'; issuesEl.appendChild(s);
+        }
+        // find long functions
+        const long = findLongFunctions(ast, 30);
+        if(long.length){
+          const d = document.createElement('div'); d.className='issue'; d.innerHTML = `<strong>Long functions detected:</strong> ${long.map(l=>l.name+' (lines '+l.lines+')').join(', ')}`; issuesEl.appendChild(d);
+          suggestionsEl.innerHTML += `<div class='tutorial-step'>Consider splitting long functions into smaller helpers: ${long.map(l=>l.name).join(', ')}</div>`;
+        }
+      }catch(e){
+        const div = document.createElement('div'); div.className='issue'; div.textContent = `Parse error: ${e.message}`; issuesEl.appendChild(div);
+      }
+    }
+
+    // find undeclared identifiers (very simple analysis)
+    function findUndeclaredIdentifiers(ast){
+      const declared = new Set();
+      const used = new Set();
+      function walk(node,parent){
+        if(!node) return;
+        switch(node.type){
+          case 'VariableDeclarator': if(node.id && node.id.name) declared.add(node.id.name); break;
+          case 'FunctionDeclaration': if(node.id && node.id.name) declared.add(node.id.name); node.params.forEach(p=>{ if(p.name) declared.add(p.name); }); break;
+          case 'Identifier':
+            if(parent && ['VariableDeclarator','FunctionDeclaration','FunctionExpression','Property'].includes(parent.type)) break;
+            used.add(node.name);
+            break;
+        }
+        for(const k in node){ if(node.hasOwnProperty(k) && node[k] && typeof node[k]==='object'){ const child = node[k]; if(Array.isArray(child)) child.forEach(c=>walk(c,node)); else walk(child,node); }}
+      }
+      walk(ast,null);
+      // filter common globals
+      const globals = new Set(['console','Math','Date','Number','String','Array','Object','window','document','JSON','parseInt','setTimeout','setInterval','Promise','console']);
+      const undeclared = Array.from(used).filter(x=>!declared.has(x) && !globals.has(x));
+      // exclude obvious property names (rudimentary)
+      return undeclared.slice(0,10);
+    }
+
+    function findLongFunctions(ast, threshold){
+      const results = [];
+      function walk(node){
+        if(!node) return;
+        if(node.type==='FunctionDeclaration' || node.type==='FunctionExpression' || node.type==='ArrowFunctionExpression'){
+          const name = node.id && node.id.name ? node.id.name : (node.type==='ArrowFunctionExpression' ? 'arrow' : 'anonymous');
+          const start = node.loc.start.line; const end = node.loc.end.line;
+          if(end-start > threshold) results.push({name,name,start,lines:end-start});
+        }
+        for(const k in node){ if(node.hasOwnProperty(k) && node[k] && typeof node[k]==='object'){ const child = node[k]; if(Array.isArray(child)) child.forEach(c=>walk(c)); else walk(child); }}
+      }
+      walk(ast);
+      return results;
+    }
+
+    // ---------- Debugging Hints ----------
+    function getHints(code){
+      const hints = [];
+      // check for common mistakes: assignment in conditional
+      if(/if\s*\(\s*[^\)]*=[^=][^\)]*\)/.test(code)) hints.push('Possible assignment inside an if condition. Use == or === for comparison.');
+      if(/==\s+0/.test(code)) hints.push('Avoid loose equality checks; use === for strict comparison.');
+      if(/\.length\s*===\s*0/.test(code)) hints.push('Checking length === 0 is fine, consider using !arr.length for brevity.');
+      if(code.includes('==')) hints.push('Found == used — prefer === for strict equality.');
+      if(code.includes('var ')) hints.push('Consider using let/const instead of var for block scoping.');
+      return hints;
+    }
+
+    // ---------- Exercise generation (heuristic) ----------
+    function generateExerciseFromCode(code){
+      // detect simple functions to build tests
+      try{
+        const ast = esprima.parseScript(code,{ tolerant:true });
+        const funcs = [];
+        function walk(node){
+          if(!node) return;
+          if(node.type==='FunctionDeclaration' && node.id && node.id.name){ funcs.push({name:node.id.name, params:node.params.map(p=>p.name)}); }
+          for(const k in node){ if(node.hasOwnProperty(k) && node[k] && typeof node[k]==='object'){ const child = node[k]; if(Array.isArray(child)) child.forEach(c=>walk(c)); else walk(child); }}
+        }
+        walk(ast);
+        if(funcs.length){
+          const f = funcs[0];
+          return {title:`Implement ${f.name}(${f.params.join(',')})`, desc:`Create a function named ${f.name} that passes the provided tests.`, tests: simpleTestsForFunction(f.name)};
+        }
+      }catch(e){ }
+      // fallback
+      return {title:'Write a small function', desc:'Write a function that returns the factorial of a number.', tests: [{input:5,expected:120}] };
+    }
+
+    function simpleTestsForFunction(name){
+      return [
+        {args:[1], expected:1},
+        {args:[2], expected:2},
+        {args:[5], expected:120},
+      ].map(t=>({call:`${name}(${t.args.join(',')})`, expected:t.expected}));
+    }
+
+    function renderExercises(){ exercisesEl.innerHTML = '';
+      const sample = {title:'Sum Two Numbers',desc:'Implement a function sum(a,b) that returns a+b',tests:[{call:'sum(1,2)',expected:3},{call:'sum(-1,1)',expected:0}]};
+      const div = document.createElement('div'); div.className='exercise'; div.innerHTML = `<strong>${sample.title}</strong><div class='muted' style='margin-top:6px'>${sample.desc}</div><div style='margin-top:8px'><button class='btn' onclick="loadExercise(sample)">Load</button></div>`;
+      // avoid inline; attach via dataset
+      exercisesEl.appendChild(div);
+    }
+
+    window.loadExercise = function(sample){
+      // sample is not defined in global scope here; instead build small exercise
+      const ex = {title:'Sum Two Numbers',desc:'Implement sum(a,b)',tests:[{call:'sum(1,2)',expected:3},{call:'sum(-1,1)',expected:0}]};
+      document.getElementById('code').value = `function sum(a,b){\n  // TODO: return the sum\n}\n\nconsole.log(sum(1,2));`;
+      document.getElementById('test-status').textContent = `Loaded: ${ex.title}`;
+      // attach tests to run
+      document.getElementById('test-run').dataset.tests = JSON.stringify(ex.tests);
+    }
+
+    // ---------- Testing harness ----------
+    runTestsBtn.addEventListener('click', ()=>{
+      const tests = document.getElementById('test-run').dataset.tests;
+      if(!tests){ alert('No tests loaded'); return; }
+      const arr = JSON.parse(tests);
+      // run code in iframe and capture results
+      const iframe = document.createElement('iframe'); iframe.style.display='none'; iframe.sandbox='allow-scripts'; document.body.appendChild(iframe);
+      const win = iframe.contentWindow; const results = [];
+      try{
+        // inject a small test harness
+        const code = document.getElementById('code').value;
+        const harness = `\n;(function(){ try{ ${code} } catch(e){ console.error('RUNTIME',e.message);}\n  const _tests = ${JSON.stringify(arr)}; const out=[]; _tests.forEach(t=>{ try{ const val = eval(t.call); const ok = val === t.expected; out.push({call:t.call,expected:t.expected,actual:val,ok}); }catch(e){ out.push({call:t.call,expected:t.expected,actual:'ERROR:'+e.message,ok:false}); } }); parent.postMessage({_codetutor_test_results:out}, '*'); })();`;
+        win.eval(harness);
+      }catch(e){ alert('Error running tests: '+e.message); document.body.removeChild(iframe); }
+      window.addEventListener('message', function handler(ev){ if(ev.data && ev.data._codetutor_test_results){ const res = ev.data._codetutor_test_results; document.getElementById('test-status').innerHTML = res.map(r=>`<div style='margin-bottom:6px' class='${r.ok?"success":"issue"}'>${r.call} — expected: ${r.expected} actual: ${r.actual} — ${r.ok? 'OK':'FAIL'}</div>`).join(''); window.removeEventListener('message',handler); setTimeout(()=>document.body.removeChild(iframe),200); } });
+    });
+
+    // ---------- Format (very naive) ----------
+    formatBtn.addEventListener('click', ()=>{
+      const v = codeEl.value;
+      // simple indentation normalization
+      const formatted = v.split('\n').map(l=>l.trimEnd()).join('\n');
+      codeEl.value = formatted;
+      alert('Basic formatting applied (trimmed trailing whitespace). For full formatting integrate Prettier in production.');
+    });
+
+    // ---------- Bind actions ----------
+    runBtn.addEventListener('click', ()=> safeRun(codeEl.value));
+    lintBtn.addEventListener('click', ()=> analyzeCode(codeEl.value));
+    hintBtn.addEventListener('click', ()=>{ const h = getHints(codeEl.value); suggestionsEl.innerHTML = h.length? h.map(x=>`<div class='tutorial-step'>${x}</div>`).join('') : '<div class="success">No hints found. Code looks OK.</div>'; });
+
+    genExBtn.addEventListener('click', ()=>{
+      const ex = generateExerciseFromCode(codeEl.value);
+      const div = document.createElement('div'); div.className='exercise'; div.innerHTML = `<strong>${ex.title}</strong><div class='muted' style='margin-top:6px'>${ex.desc}</div><div style='margin-top:8px'><button class='btn' id='load-ex'>Load Exercise</button></div>`;
+      exercisesEl.innerHTML=''; exercisesEl.appendChild(div);
+      document.getElementById('load-ex').addEventListener('click', ()=>{
+        // create simple stub and attach tests
+        const stub = `function ${ex.title.split(' ')[1]}(){\n  // implement\n}\n`;
+        codeEl.value = stub;
+        document.getElementById('test-run').dataset.tests = JSON.stringify(ex.tests);
+        document.getElementById('test-status').textContent = `Loaded: ${ex.title}`;
+      });
+    });
+
+    // ---------- Tutorials (simple) ----------
+    const sampleTutorials = [
+      {title:'Intro to Functions',steps:[
+        'Step 1: Write a function named add(a,b) that returns a+b.',
+        'Step 2: Call add(2,3) and log the result.',
+        'Step 3: Modify add to handle missing arguments (default to 0).'
+      ]},
+      {title:'Loops & Arrays',steps:[
+        'Step 1: Create an array of numbers.',
+        'Step 2: Use a for loop to compute the sum.',
+        'Step 3: Convert the loop to use reduce.'
+      ]}
+    ];
+    function renderTutorials(){
+      tutorialsEl.innerHTML = sampleTutorials.map((t,idx)=>`<div class='tutorial-step'><strong>${t.title}</strong><div style='margin-top:6px' class='muted'>${t.steps[0]}</div><div style='margin-top:8px'><button class='btn' data-idx='${idx}'>Start</button></div></div>`).join('');
+      tutorialsEl.querySelectorAll('button').forEach(b=> b.addEventListener('click', (e)=> startTutorial(e.target.dataset.idx)));
+    }
+
+    function startTutorial(i){ const t = sampleTutorials[i]; let step=0; const next=()=>{
+      if(step>=t.steps.length){ alert('Tutorial complete'); return; }
+      alert(`${t.title} — ${t.steps[step]}`);
+      step++; if(step<t.steps.length) next(); }
+      next();
+    }
+
+    renderTutorials(); renderExercises();
+
+    // autorun
+    let autorunTimer = null;
+    codeEl.addEventListener('input', ()=>{
+      if(autorunEl.checked){ clearTimeout(autorunTimer); autorunTimer = setTimeout(()=>{ analyzeCode(codeEl.value); safeRun(codeEl.value); },800); }
+    });
+
+    // init sample
+    analyzeCode(codeEl.value);
+  </script>
+</body>
+</html>
